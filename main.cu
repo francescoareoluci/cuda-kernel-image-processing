@@ -20,15 +20,16 @@ int main(int argc, char **argv)
 	Image img;
 	img.loadImage("images/1.png");
 
-	Image newImg;
+	Image newMtImg;
+	Image newNpImg;
 
 	// Executing multithread filtering for each image
 	auto t1 = std::chrono::high_resolution_clock::now();
-	img.multithreadFiltering(newImg, kernel);
+	img.multithreadFiltering(newMtImg, kernel);
 	auto t2 = std::chrono::high_resolution_clock::now();
 
 	auto t3 = std::chrono::high_resolution_clock::now();
-	img.applyFilter(newImg, kernel);
+	img.applyFilter(newNpImg, kernel);
 	auto t4 = std::chrono::high_resolution_clock::now();
 
 	// Evaluating execution times
@@ -38,5 +39,6 @@ int main(int argc, char **argv)
 	std::cout << "Multithread Execution time: " << multithreadDuration << std::endl;
 	std::cout << "Single thread Execution time: " << singleDuration << std::endl;
 
-	newImg.saveImage("output/2.png");
+	newMtImg.saveImage("output/1_mt.png");
+	newNpImg.saveImage("output/1_np.png");
 }
