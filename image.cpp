@@ -192,7 +192,7 @@ std::vector<float> Image::applyFilterCommon(const Kernel& kernel) const
     return newImage;
 }
 
-bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel)
+bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel, const CudaMemType cudaType)
 {
     std::cout << "Applying multithread filter to image" << std::endl;
 
@@ -222,12 +222,36 @@ bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel)
     const float* paddedImagePtr = {paddedImage.data()};
     float* newImagePtr = {newImage.data()};
 
-    // Create threads and assign to them
-    // the threadConv function
-     bool result = runShared(paddedImagePtr, newImagePtr, maskPtr,
-        width, height,
-        width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
-        filterWidth, filterHeight);
+    bool result = false;
+    switch (cudaType) {
+    	case CudaMemType::GLOBAL:
+    		 result = run(paddedImagePtr, newImagePtr, maskPtr,
+    		        width, height,
+    		        width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
+    		        filterWidth, filterHeight);
+    	break;
+
+    	case CudaMemType::CONSTANT:
+    		result = runConstant(paddedImagePtr, newImagePtr, maskPtr,
+    		    		        width, height,
+    		    		        width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
+    		    		        filterWidth, filterHeight);
+    	break;
+
+    	case CudaMemType::SHARED:
+    		result = runShared(paddedImagePtr, newImagePtr, maskPtr,
+    		    		    		        width, height,
+    		    		    		        width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
+    		    		    		        filterWidth, filterHeight);
+    	break;
+
+    	default:
+    		result = runShared(paddedImagePtr, newImagePtr, maskPtr,
+    		    		    		    		        width, height,
+    		    		    		    		        width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
+    		    		    		    		        filterWidth, filterHeight);
+    	break;
+    }
 
      if (!result) {
     	std::cerr << "Error while executing CUDA filtering" << std::endl;

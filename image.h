@@ -12,6 +12,12 @@
 #include <thread>
 #include "kernel.h"
 
+enum class CudaMemType
+{
+	GLOBAL,
+	CONSTANT,
+	SHARED
+};
 
 class Image
 {
@@ -92,7 +98,7 @@ class Image
          */
         bool applyFilter(const Kernel& kernel);
 
-        bool multithreadFiltering(Image& resultingImage, const Kernel& kernel);
+        bool multithreadFiltering(Image& resultingImage, const Kernel& kernel, const CudaMemType cudaType);
 
     private:
         /*

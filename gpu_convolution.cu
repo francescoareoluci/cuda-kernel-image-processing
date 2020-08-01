@@ -224,6 +224,8 @@ bool run(const float* sourceImage,
         int paddedWidth, int paddedHeight,
         int filterWidth, int filterHeight)
 {
+	std::cout << "Starting CUDA global memory convolution" << std::endl;
+
 	const int blockWidth = 32;
 	const int blockHeight = 32;
 
@@ -316,6 +318,8 @@ bool runConstant(const float* sourceImage,
         int paddedWidth, int paddedHeight,
         int filterWidth, int filterHeight)
 {
+	std::cout << "Starting CUDA constant memory convolution" << std::endl;
+
 	const int blockWidth = 32;
 	const int blockHeight = 32;
 
@@ -403,6 +407,8 @@ bool runShared(const float* sourceImage,
         		int paddedWidth, int paddedHeight,
         		int filterWidth, int filterHeight)
 {
+	std::cout << "Starting CUDA shared memory convolution" << std::endl;
+
 	float *d_sourceImagePtr;
 	float *d_outImagePtr;
 

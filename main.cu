@@ -9,6 +9,10 @@
 #define LAPLACIAN_FILTER_COMMAND            "laplacian"
 #define GAUSSIAN_LAPLACIAN_COMMAND      "gaussian_laplacian"
 
+#define CUDA_GLOBAL		"global"
+#define CUDA_CONSTANT	"constant"
+#define CUDA_SHARED		"shared"
+
 enum class FilterType
 {
     GAUSSIAN_FILTER,
@@ -24,9 +28,10 @@ int main(int argc, char **argv)
 
 	 // Check command line parameters
 	 if (argc < 3) {
-		 std::cerr << "Usage: " << argv[0] << " filter_type image_path" << std::endl;
+		 std::cerr << "Usage: " << argv[0] << " filter_type image_path cuda_mem_tye" << std::endl;
 		 std::cerr << "filter_type: <gaussian | sharpen | edge_detect | alt_edge_detect>" << std::endl;
 	    std::cerr << "image_path: specify the image path" << std::endl;
+	    std::cerr << "(optional) cuda_mem_type: <global | constant | shared>. Default: shared" << std::endl;
 	     return 1;
 	}
 
@@ -83,6 +88,17 @@ int main(int argc, char **argv)
 	}
 	filter.printKernel();
 
+	CudaMemType cudaType = CudaMemType::SHARED;
+	if (argc == 4) {
+		std::string cudaMemCmd = std::string(argv[3]);
+		if (cudaMemCmd == CUDA_GLOBAL)
+			cudaType = CudaMemType::GLOBAL;
+		else if(cudaMemCmd == CUDA_CONSTANT)
+			cudaType = CudaMemType::CONSTANT;
+		else if(cudaMemCmd == CUDA_SHARED)
+			cudaType = CudaMemType::SHARED;
+	}
+
 	Image img;
 	bool loadResult = img.loadImage(argv[2]);
 	if (!loadResult) {
@@ -99,7 +115,7 @@ int main(int argc, char **argv)
 
 	// Executing multithread filtering for each image
 	auto t1 = std::chrono::high_resolution_clock::now();
-	bool cudaResult = img.multithreadFiltering(newMtImg, filter);
+	bool cudaResult = img.multithreadFiltering(newMtImg, filter, cudaType);
 	auto t2 = std::chrono::high_resolution_clock::now();
 
 	auto t3 = std::chrono::high_resolution_clock::now();
