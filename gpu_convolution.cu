@@ -437,7 +437,6 @@ bool runShared(const float* sourceImage,
 	int noSubBlocks = static_cast<int>(ceil(static_cast<float>(tileHeight) /
 																					static_cast<float>(divUp(height, blockHeight))));
 
-	printf("NoSubBlocks: %d\n", noSubBlocks);
 	printf("Blocks: %d, Threads: %d\n", divUp(width, blockWidth) * divUp(height, blockHeight), tileWidth * threadBlockHeight);
 
 	// Evaluates the shared memory size

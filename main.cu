@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 	switch (filterType)
 	{
 	 	 case FilterType::GAUSSIAN_FILTER:
-	 		 filter.setGaussianFilter(7, 7, 1);
+	 		 filter.setGaussianFilter(5, 5, 1);
 	     break;
 
 	     case FilterType::SHARPEN_FILTER:
@@ -118,20 +118,24 @@ int main(int argc, char **argv)
 	bool cudaResult = img.multithreadFiltering(newMtImg, filter, cudaType);
 	auto t2 = std::chrono::high_resolution_clock::now();
 
+	std::cout << std::endl;
+
 	auto t3 = std::chrono::high_resolution_clock::now();
 	bool sequentialResult = img.applyFilter(newNpImg, filter);
 	auto t4 = std::chrono::high_resolution_clock::now();
 
+	std::cout << std::endl;
+
 	// Evaluating execution times and save results
 	if (cudaResult) {
 		auto multithreadDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-		std::cout << "Multithread Execution time: " << multithreadDuration << " μs" << std::endl;
+		std::cout << "Total CUDA Execution time: " << multithreadDuration << " μs" << std::endl;
 		newMtImg.saveImage("output/1_mt.png");
 	}
 
 	if (sequentialResult) {
 		auto singleDuration = std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
-		std::cout << "Sequential Execution time: " << singleDuration << " μs" << std::endl;
+		std::cout << "Total Sequential Execution time: " << singleDuration << " μs" << std::endl;
 		newNpImg.saveImage("output/1_np.png");
 	}
 }

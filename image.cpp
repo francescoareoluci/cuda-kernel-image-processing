@@ -86,7 +86,7 @@ bool Image::saveImage(const char *filename) const
 
 bool Image::applyFilter(Image& resultingImage, const Kernel& kernel) const
 {
-    std::cout << "Applying filter to image" << std::endl;
+    std::cout << "Applying sequential filter to image" << std::endl;
 
     std::vector<float> newImage = applyFilterCommon(kernel);
 
@@ -100,7 +100,7 @@ bool Image::applyFilter(Image& resultingImage, const Kernel& kernel) const
 
 bool Image::applyFilter(const Kernel& kernel)
 {
-    std::cout << "Applying filter to image" << std::endl;
+    std::cout << "Applying sequential filter to image" << std::endl;
 
     std::vector<float> newImage = applyFilterCommon(kernel);
      if (newImage.empty()) {
@@ -130,16 +130,21 @@ std::vector<float> Image::applyFilterCommon(const Kernel& kernel) const
     // Checking image channels and kernel size
     if (channels != 1) {
         std::cerr << "Invalid number of image's channels" << std::endl;
-        return std::vector<float>();
+          return std::vector<float>();
     }
 
-    if (filterHeight == 0 || filterWidth == 0) {
+     if (filterHeight == 0 || filterWidth == 0) {
         std::cerr << "Invalid filter dimension" << std::endl;
         return std::vector<float>();
     }
 
     // Input padding w.r.t. filter size
+     auto t1 = std::chrono::high_resolution_clock::now();
     std::vector<float> paddedImage = buildReplicatePaddedImage(floor(filterHeight/2), floor(filterWidth/2));
+     auto t2 = std::chrono::high_resolution_clock::now();
+     auto paddingDuration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    std::cout << "Padding Execution time: " << paddingDuration << " μs" << std::endl;
+
     std::vector<float> newImage(height * width);
 
     // Get kernel matrix
@@ -158,7 +163,7 @@ std::vector<float> Image::applyFilterCommon(const Kernel& kernel) const
     int sourceImgLineIndex = 0;
     int outImgRowIndex = 0;
 
-    auto t1 = std::chrono::high_resolution_clock::now();
+   t1 = std::chrono::high_resolution_clock::now();
    // Apply convolution
     for (int i = s; i < height + s; i++) {
     	outImgRowIndex = (i - s) * width;
@@ -181,13 +186,13 @@ std::vector<float> Image::applyFilterCommon(const Kernel& kernel) const
          pixelSum = 0;
        }
    }
-    auto t2 = std::chrono::high_resolution_clock::now();
+   t2 = std::chrono::high_resolution_clock::now();
    // Evaluating execution times
-    auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+    auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
    std::cout << "Sequential filtering execution time: " << filterDuration << " μs" << std::endl;
 
-    paddedImage.clear();
-    mask.clear();
+   paddedImage.clear();
+   mask.clear();
 
     return newImage;
 }
@@ -209,7 +214,7 @@ bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel, co
     auto t1 = std::chrono::high_resolution_clock::now();
    std::vector<float> paddedImage = buildReplicatePaddedImage(floor(filterHeight/2), floor(filterWidth/2));
     auto t2 = std::chrono::high_resolution_clock::now();
-    auto paddingDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+    auto paddingDuration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
    std::cout << "Padding Execution time: " << paddingDuration << " μs" << std::endl;
 
    std::vector<float> newImage(height * width);
@@ -270,7 +275,7 @@ bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel, co
     newImage.clear();
     mask.clear();
 
-    return true;
+     return true;
 }
 
 std::vector<float> Image::buildReplicatePaddedImage(const int paddingHeight,
