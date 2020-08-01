@@ -184,7 +184,7 @@ std::vector<float> Image::applyFilterCommon(const Kernel& kernel) const
     auto t2 = std::chrono::high_resolution_clock::now();
    // Evaluating execution times
     auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-   std::cout << "Sequential filtering execution time: " << filterDuration << std::endl;
+   std::cout << "Sequential filtering execution time: " << filterDuration << " μs" << std::endl;
 
     paddedImage.clear();
     mask.clear();
@@ -210,7 +210,7 @@ bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel)
    std::vector<float> paddedImage = buildReplicatePaddedImage(floor(filterHeight/2), floor(filterWidth/2));
     auto t2 = std::chrono::high_resolution_clock::now();
     auto paddingDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-   std::cout << "Padding Execution time: " << paddingDuration << std::endl;
+   std::cout << "Padding Execution time: " << paddingDuration << " μs" << std::endl;
 
    std::vector<float> newImage(height * width);
 
@@ -224,10 +224,19 @@ bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel)
 
     // Create threads and assign to them
     // the threadConv function
-    runShared(paddedImagePtr, newImagePtr, maskPtr,
+     bool result = runShared(paddedImagePtr, newImagePtr, maskPtr,
         width, height,
         width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
         filterWidth, filterHeight);
+
+     if (!result) {
+    	std::cerr << "Error while executing CUDA filtering" << std::endl;
+    	paddedImage.clear();
+    	newImage.clear();
+    	mask.clear();
+
+    	return false;
+    }
 
     resultingImage.setImage(newImage, m_imageWidth, m_imageHeight);
 

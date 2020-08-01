@@ -13,7 +13,7 @@
  * 					convolution. The launched kernel will use global memory for
  * 					source image and kernel matrix
  */
-void run(const float* sourceImage,
+bool run(const float* sourceImage,
         float* outImage,
         const float* mask,
         int width, int height,
@@ -25,7 +25,7 @@ void run(const float* sourceImage,
  * 					convolution. The launched kernel will use global memory for
  * 					source image and constant memory for kernel matrix
  */
-void runConstant(const float* sourceImage,
+bool runConstant(const float* sourceImage,
         float* outImage,
         const float* mask,
         int width, int height,
@@ -37,7 +37,7 @@ void runConstant(const float* sourceImage,
  * 					convolution. The launched kernel will use shared memory to
  * 					load tiles of the source image and constant memory for kernel matrix
  */
-void runShared(const float* sourceImage,
+bool runShared(const float* sourceImage,
         float* outImage,
         const float* mask,
         int width, int height,

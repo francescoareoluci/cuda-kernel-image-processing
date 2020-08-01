@@ -217,7 +217,7 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 	}
 }
 
-void run(const float* sourceImage,
+bool run(const float* sourceImage,
         float* outImage,
         const float* mask,
         int width, int height,
@@ -249,7 +249,7 @@ void run(const float* sourceImage,
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("Error: %s\n", cudaGetErrorString(err));
-		return;
+		return false;
 	}
 
 	t3 = std::chrono::high_resolution_clock::now();
@@ -264,7 +264,7 @@ void run(const float* sourceImage,
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("Error: %s\n", cudaGetErrorString(err));
-		return;
+		return false;
 	}
 
 	// Allocates block size and grid size
@@ -280,15 +280,17 @@ void run(const float* sourceImage,
 					 filterWidth,  filterHeight);
 
 	err = cudaGetLastError();
-	if (err != cudaSuccess)
+	if (err != cudaSuccess) {
 	    printf("Error: %s\n", cudaGetErrorString(err));
+	    return false;
+	}
 
 	// Waits for threads to finish work
 	cudaDeviceSynchronize();
 
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-	std::cout << "Filtering multi Execution time: " << filterDuration << std::endl;
+	std::cout << "CUDA global memory filtering execution time: " << filterDuration << " μs" << std::endl;
 
 	t3 = std::chrono::high_resolution_clock::now();
 
@@ -297,15 +299,17 @@ void run(const float* sourceImage,
 
 	t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
-	std::cout << "Copy Execution time: " << copyDuration << std::endl;
+	std::cout << "Copy Execution time: " << copyDuration << " μs" << std::endl;
 
 	// Cleanup after kernel execution
 	cudaFree(d_sourceImagePtr);
 	cudaFree(d_maskPtr);
 	cudaFree(d_outImagePtr);
+
+	return true;
 }
 
-void runConstant(const float* sourceImage,
+bool runConstant(const float* sourceImage,
         float* outImage,
         const float* mask,
         int width, int height,
@@ -335,7 +339,7 @@ void runConstant(const float* sourceImage,
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("Error: %s\n", cudaGetErrorString(err));
-		return;
+		return false;
 	}
 
 	t3 = std::chrono::high_resolution_clock::now();
@@ -350,7 +354,7 @@ void runConstant(const float* sourceImage,
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("Error: %s\n", cudaGetErrorString(err));
-		return;
+		return false;
 	}
 
 	// Allocates block size and grid size
@@ -366,29 +370,33 @@ void runConstant(const float* sourceImage,
 					 filterWidth,  filterHeight);
 
 	err = cudaGetLastError();
-	if (err != cudaSuccess)
+	if (err != cudaSuccess) {
 	    printf("Error: %s\n", cudaGetErrorString(err));
+	    return false;
+	}
 
 	// Waits for threads to finish work
 	cudaDeviceSynchronize();
 
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-	std::cout << "Filtering multi Execution time: " << filterDuration << std::endl;
+	std::cout << "CUDA constant filtering execution time: " << filterDuration << " μs" << std::endl;
 
 	// Transfer resulting image back
 	t3 = std::chrono::high_resolution_clock::now();
 	cudaMemcpy(outImage, d_outImagePtr, outImageSize, cudaMemcpyDeviceToHost);
 	t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
-	std::cout << "Copy Execution time: " << copyDuration << std::endl;
+	std::cout << "Copy Execution time: " << copyDuration << " μs" << std::endl;
 
 	// Cleanup after kernel execution
 	cudaFree(d_sourceImagePtr);
 	cudaFree(d_outImagePtr);
+
+	return true;
 }
 
-void runShared(const float* sourceImage,
+bool runShared(const float* sourceImage,
         		float* outImage,
         		const float* mask,
         		int width, int height,
@@ -442,7 +450,7 @@ void runShared(const float* sourceImage,
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("Error: %s\n", cudaGetErrorString(err));
-		return;
+		return false;
 	}
 
 	t3 = std::chrono::high_resolution_clock::now();
@@ -457,7 +465,7 @@ void runShared(const float* sourceImage,
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("Error: %s\n", cudaGetErrorString(err));
-		return;
+		return false;
 	}
 
 	auto t1 = std::chrono::high_resolution_clock::now();
@@ -471,15 +479,17 @@ void runShared(const float* sourceImage,
 																				filterWidth, filterHeight);
 
 	err = cudaGetLastError();
-	if (err != cudaSuccess)
+	if (err != cudaSuccess) {
 		printf("Error: %s\n", cudaGetErrorString(err));
+		return false;
+	}
 
 	// Waits for threads to finish work
 	cudaDeviceSynchronize();
 
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-	std::cout << "Filtering multi Execution time: " << filterDuration << std::endl;
+	std::cout << "CUDA shared filtering execution time: " << filterDuration << " μs" << std::endl;
 
 	t3 = std::chrono::high_resolution_clock::now();
 
@@ -488,13 +498,17 @@ void runShared(const float* sourceImage,
 
 	t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
-	std::cout << "Copy Execution time: " << copyDuration << std::endl;
+	std::cout << "Copy Execution time: " << copyDuration << " μs" << std::endl;
 
 	err = cudaGetLastError();
-	if (err != cudaSuccess)
+	if (err != cudaSuccess) {
 		printf("Error: %s\n", cudaGetErrorString(err));
+		return false;
+	}
 
 	// Cleanup after kernel execution
 	cudaFree(d_sourceImagePtr);
 	cudaFree(d_outImagePtr);
+
+	return true;
 }
