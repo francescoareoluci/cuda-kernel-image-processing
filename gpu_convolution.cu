@@ -22,7 +22,7 @@ __global__ void filterImageGlobal(float* d_sourceImagePtr, float* d_maskPtr, flo
 						int width, int height, int paddedWidth, int paddedHeight,
 						int filterWidth, int filterHeight)
 {
-	const int s = floor(float(filterWidth) / 2);
+	const int s = floor(static_cast<float>(filterWidth) / 2);
 	const int i = blockIdx.y * blockDim.y + threadIdx.y + s;
 	const int j = blockIdx.x * blockDim.x + threadIdx.x + s;
 
@@ -124,7 +124,8 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 	int tileHeight = blockHeight + 2 * surroundingPixels;
 
 	// Evaluates number of sub blocks
-	int noSubBlocks = int(ceil(float(tileHeight) / float(blockDim.y)));
+	int noSubBlocks = static_cast<int>(ceil(static_cast<float>(tileHeight) /
+																					static_cast<float>(blockDim.y)));
 
 	// Get start and end coordinates for blocks
 	int blockStartCol = blockIdx.x * blockWidth + surroundingPixels;
@@ -235,12 +236,13 @@ void run(const float* sourceImage,
 	const int outImageSize = sizeof(float) * width * height;
 
 	int copyDuration = 0;
+	auto t3 = std::chrono::high_resolution_clock::now();
 
 	// Allocate device memory for images and filter
-	auto t3 = std::chrono::high_resolution_clock::now();
-	cudaMalloc((void**)&d_sourceImagePtr, sourceImgSize);
-	cudaMalloc((void**)&d_maskPtr, maskSize);
-	cudaMalloc((void**)&d_outImagePtr, outImageSize);
+	cudaMalloc(reinterpret_cast<void**>(&d_sourceImagePtr), sourceImgSize);
+	cudaMalloc(reinterpret_cast<void**>(&d_maskPtr), maskSize);
+	cudaMalloc(reinterpret_cast<void**>(&d_outImagePtr), outImageSize);
+
 	auto t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
 
@@ -250,10 +252,12 @@ void run(const float* sourceImage,
 		return;
 	}
 
-	// Transfer data from host to device memory
 	t3 = std::chrono::high_resolution_clock::now();
+
+	// Transfer data from host to device memory
 	cudaMemcpy(d_sourceImagePtr, sourceImage, sourceImgSize, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_maskPtr, mask, maskSize, cudaMemcpyHostToDevice);
+
 	t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
 
@@ -286,9 +290,11 @@ void run(const float* sourceImage,
 	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
 	std::cout << "Filtering multi Execution time: " << filterDuration << std::endl;
 
-	// Transfer resulting image back
 	t3 = std::chrono::high_resolution_clock::now();
+
+	// Transfer resulting image back
 	cudaMemcpy(outImage, d_outImagePtr, outImageSize, cudaMemcpyDeviceToHost);
+
 	t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
 	std::cout << "Copy Execution time: " << copyDuration << std::endl;
@@ -317,11 +323,12 @@ void runConstant(const float* sourceImage,
 	const int outImageSize = sizeof(float) * width * height;
 
 	int copyDuration = 0;
+	auto t3 = std::chrono::high_resolution_clock::now();
 
 	// Allocate device memory for images and filter
-	auto t3 = std::chrono::high_resolution_clock::now();
-	cudaMalloc((void**)&d_sourceImagePtr, sourceImgSize);
-	cudaMalloc((void**)&d_outImagePtr, outImageSize);
+	cudaMalloc(reinterpret_cast<void**>(&d_sourceImagePtr), sourceImgSize);
+	cudaMalloc(reinterpret_cast<void**>(&d_outImagePtr), outImageSize);
+
 	auto t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
 
@@ -331,10 +338,12 @@ void runConstant(const float* sourceImage,
 		return;
 	}
 
-	// Transfer data from host to device memory
 	t3 = std::chrono::high_resolution_clock::now();
+
+	// Transfer data from host to device memory
 	cudaMemcpy(d_sourceImagePtr, sourceImage, sourceImgSize, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(d_cFilterKernel, mask, maskSize, 0, cudaMemcpyHostToDevice);
+
 	t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
 
@@ -411,7 +420,8 @@ void runShared(const float* sourceImage,
 	dim3 blocksPerGrid(divUp(width, blockWidth),
 											divUp(height, blockHeight));
 
-	int noSubBlocks = int(ceil(float(tileHeight) / float(divUp(height, blockHeight))));
+	int noSubBlocks = static_cast<int>(ceil(static_cast<float>(tileHeight) /
+																					static_cast<float>(divUp(height, blockHeight))));
 
 	printf("NoSubBlocks: %d\n", noSubBlocks);
 	printf("Blocks: %d, Threads: %d\n", divUp(width, blockWidth) * divUp(height, blockHeight), tileWidth * threadBlockHeight);
@@ -420,11 +430,12 @@ void runShared(const float* sourceImage,
 	int sharedMemorySize = tileWidth * tileHeight * sizeof(float);
 
 	int copyDuration = 0;
-
 	auto t3 = std::chrono::high_resolution_clock::now();
+
 	// Allocate device memory for images
-	cudaMalloc((void**)&d_sourceImagePtr, sourceImgSize);
-	cudaMalloc((void**)&d_outImagePtr, outImageSize);
+	cudaMalloc(reinterpret_cast<void**>(&d_sourceImagePtr), sourceImgSize);
+	cudaMalloc(reinterpret_cast<void**>(&d_outImagePtr), outImageSize);
+
 	auto t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
 
@@ -434,10 +445,12 @@ void runShared(const float* sourceImage,
 		return;
 	}
 
-	// Transfer data from host to device memory
 	t3 = std::chrono::high_resolution_clock::now();
+
+	// Transfer data from host to device memory
 	cudaMemcpy(d_sourceImagePtr, sourceImage, sourceImgSize, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(d_cFilterKernel, mask, maskSize, 0, cudaMemcpyHostToDevice);
+
 	t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
 
@@ -468,9 +481,11 @@ void runShared(const float* sourceImage,
 	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
 	std::cout << "Filtering multi Execution time: " << filterDuration << std::endl;
 
-	// Transfer resulting image back
 	t3 = std::chrono::high_resolution_clock::now();
+
+	// Transfer resulting image back
 	cudaMemcpy(outImage, d_outImagePtr, outImageSize, cudaMemcpyDeviceToHost);
+
 	t4 = std::chrono::high_resolution_clock::now();
 	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
 	std::cout << "Copy Execution time: " << copyDuration << std::endl;

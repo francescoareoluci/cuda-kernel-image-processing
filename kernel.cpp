@@ -30,9 +30,9 @@ void Kernel::printKernel() const
 
     std::cout << std::endl;
     std::cout << "=== Kernel ===" << std::endl;
-    for (int i = 0; i < height; i++) {
+     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            std::cout << (float)m_filterMatrix[j + i * width] << " ";
+            std::cout << static_cast<float>(m_filterMatrix[j + i * width]) << " ";
         }
         std::cout << "" << std::endl;
     }
@@ -61,8 +61,8 @@ bool Kernel::setGaussianFilter(const int height, const int width, const float st
     std::vector<float> kernel(width * height);
     float sum = 0.0;
 
-    int middleHeight = int(height / 2);
-    int middleWidth = int(width / 2);
+    int middleHeight = static_cast<int>(height / 2);
+    int middleWidth = static_cast<int>(width / 2);
 
     for (int i = -middleHeight; i <= middleHeight; i++) {
         for (int j = -middleWidth; j <= middleWidth; j++) {
@@ -88,7 +88,7 @@ bool Kernel::setGaussianFilter(const int height, const int width, const float st
 bool Kernel::setSharpenFilter()
 {
     std::vector<float> kernel(3 * 3);
-    this->buildKernelCommon(kernel, SHARPEN_FILTER_MAX, SHARPEN_FILTER_MIN, 3, 3);
+     this->buildKernelCommon(kernel, SHARPEN_FILTER_MAX, SHARPEN_FILTER_MIN, 3, 3);
 
     kernel[0] = 0.0;
     kernel[2] = 0.0;
@@ -99,25 +99,25 @@ bool Kernel::setSharpenFilter()
     m_filterWidth = 3;
     m_filterHeight = 3;
 
-    return true;
+     return true;
 }
 
 bool Kernel::setEdgeDetectionFilter()
 {
     std::vector<float> kernel(3 * 3);
-    this->buildKernelCommon(kernel, LINE_DETECTOR_MAX, LINE_DETECTOR_MIN, 3, 3);
+     this->buildKernelCommon(kernel, LINE_DETECTOR_MAX, LINE_DETECTOR_MIN, 3, 3);
 
     m_filterMatrix = kernel;
     m_filterWidth = 3;
     m_filterHeight = 3;
 
-    return true;
+     return true;
 }
 
 bool Kernel::setLaplacianFilter()
 {
     std::vector<float> kernel(3 * 3);
-    this->buildKernelCommon(kernel, LAPLACIAN_FILTER_MAX, LAPLACIAN_FILTER_MIN, 3, 3);
+     this->buildKernelCommon(kernel, LAPLACIAN_FILTER_MAX, LAPLACIAN_FILTER_MIN, 3, 3);
 
     kernel[0] = 0.0;
     kernel[2] = 0.0;
@@ -164,7 +164,7 @@ bool Kernel::buildKernelCommon(std::vector<float> &kernel, int max, int min, int
 {
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            if ((i == int(height / 2)) && (j == int(width / 2))) {
+            if ((i == static_cast<int>(height / 2)) && (j == static_cast<int>(width / 2))) {
                 kernel[j + i * width] = max;
             }
             else {
