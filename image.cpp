@@ -50,8 +50,8 @@ bool Image::loadImage(const char *filename)
     m_imageWidth = image.get_width();
     std::vector<float> imageMatrix(m_imageHeight * m_imageWidth);
 
-    for (int h = 0; h < image.get_height(); h++) {
-        for (int w = 0; w < image.get_width(); w++) {
+    for (unsigned int h = 0; h < image.get_height(); h++) {
+        for (unsigned int w = 0; w < image.get_width(); w++) {
             imageMatrix[w + h * m_imageWidth] = image[h][w];
             //imageMatrix[1][h][w] = image[h][w].green;
             //imageMatrix[2][h][w] = image[h][w].blue;
@@ -160,7 +160,6 @@ std::vector<float> Image::applyFilterCommon(const Kernel& kernel) const
 
     int filterRowIndex = 0;
     int sourceImgRowIndex = 0;
-    int sourceImgLineIndex = 0;
     int outImgRowIndex = 0;
 
    t1 = std::chrono::high_resolution_clock::now();
@@ -209,6 +208,11 @@ bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel, co
     // Get filter dimensions
     int filterHeight = kernel.getKernelHeight();
     int filterWidth = kernel.getKernelWidth();
+
+    if (channels != 1) {
+    	std::cerr << "Unsupported channel size" << std::endl;
+    	return false;
+    }
 
    // Input padding w.r.t. filter size
     auto t1 = std::chrono::high_resolution_clock::now();
