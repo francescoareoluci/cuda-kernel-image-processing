@@ -5,6 +5,9 @@
 #include "gpu_convolution.h"
 #include "cuda.h"
 
+#define BLOCK_WIDTH 	32
+#define BLOCK_HEIGHT	32
+
 unsigned int divUp(const unsigned int& a, const unsigned int& b)
 {
 	if (a % b != 0) {
@@ -233,8 +236,8 @@ bool run(const float* sourceImage,
 {
 	std::cout << "Starting CUDA global memory convolution" << std::endl;
 
-	const int blockWidth = 32;
-	const int blockHeight = 32;
+	const int blockWidth = BLOCK_WIDTH;
+	const int blockHeight = BLOCK_HEIGHT;
 
 	float *d_sourceImagePtr;
 	float *d_outImagePtr;
@@ -327,8 +330,8 @@ bool runConstant(const float* sourceImage,
 {
 	std::cout << "Starting CUDA constant memory convolution" << std::endl;
 
-	const int blockWidth = 32;
-	const int blockHeight = 32;
+	const int blockWidth = BLOCK_WIDTH;
+	const int blockHeight = BLOCK_HEIGHT;
 
 	float *d_sourceImagePtr;
 	float *d_outImagePtr;
