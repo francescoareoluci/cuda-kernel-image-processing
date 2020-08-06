@@ -1,20 +1,17 @@
 #
-#  Make file for cuda_image_filering_global
-#
-
-#
 # Macros
 #
 IMG_LDFLAG	= -lpng
 LDFLAGS 	= $(IMG_LDFLAG) -lm
 
-CUDA_INCFLAG	= -I/home/francesco/NVIDIA_CUDA-10.1_Samples/common/inc
-INCFLAGS	= $(CUDA_INCFLAG)
-
 CC		= nvcc
-CFLAGS		= -gencode arch=compute_50,code=sm_50
+CFLAGS		= -gencode arch=compute_61,code=sm_61 \
+		  -gencode arch=compute_52,code=sm_52 \
+		  -gencode arch=compute_50,code=sm_50 \
+		  -gencode arch=compute_30,code=sm_30 \
 		  --fmad=false \
-		  -O3 -std=c++11
+		  -O2 -std=c++11 \
+		  --compiler-options -Wall
 
 CPP_SRCS	= kernel.cpp \
 		  image.cpp 
@@ -25,8 +22,6 @@ CPP_HDRS	= kernel.h \
 
 CU_SRCS		= main.cu \
 		  gpu_convolution.cu
-
-CU_HDRS		= 
 
 CPP_OBJS	= $(CPP_SRCS:.cpp=.o) 
 CU_OBJS		= $(CU_SRCS:.cu=.o)
@@ -41,17 +36,17 @@ DEP_FILE	= Makefile.dep
 #
 .SUFFIXES: .cpp
 .cpp.o:
-	$(CC) $(INCFLAGS) $(CFLAGS)  -c $<
+	$(CC) $(CFLAGS)  -c $<
 
 .SUFFIXES: .cu
 .cu.o:
-	$(CC) $(INCFLAGS) $(CFLAGS)  -c $<
+	$(CC) $(CFLAGS)  -c $<
 
 .SUFFIXES: .d
 .cpp.d:
-	$(CC) $(INCFLAGS) -M $< > $*.d
+	$(CC) -M $< > $*.d
 .cu.d:
-	$(CC) $(INCFLAGS) -M $< > $*.d
+	$(CC) -M $< > $*.d
 
 #
 # Generating the target
