@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 	switch (filterType)
 	{
 	 	 case FilterType::GAUSSIAN_FILTER:
-	 		 filter.setGaussianFilter(5, 5, 1);
+	 		 filter.setGaussianFilter(7, 7, 1);
 	     break;
 
 	     case FilterType::SHARPEN_FILTER:

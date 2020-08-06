@@ -26,15 +26,17 @@ __global__ void filterImageGlobal(float* d_sourceImagePtr, float* d_maskPtr, flo
 	const int i = blockIdx.y * blockDim.y + threadIdx.y + s;
 	const int j = blockIdx.x * blockDim.x + threadIdx.x + s;
 
-	int filterRowIndex = 0;
-	int sourceImgRowIndex = 0;
+	unsigned int filterRowIndex = 0;
+	unsigned int sourceImgRowIndex = 0;
+	unsigned int sourceImgIndex = 0;
+	unsigned int maskIndex = 0;
 	float pixelSum = 0;
-	int sourceImgIndex = 0;
-	int maskIndex = 0;
 
 	// Check out of bounds thread idx
 	if( j >= s && j < paddedWidth - s &&
 			i >= s && i < paddedHeight - s) {
+
+		int outPixelPos = (j - s) + (i - s) * width;
 
 		// Apply convolution
 		for (int h = -s;  h <= s; h++) {
@@ -56,7 +58,7 @@ __global__ void filterImageGlobal(float* d_sourceImagePtr, float* d_maskPtr, flo
 		}
 
 		// Write pixel on the output image
-		d_outImagePtr[(j - s) + (i - s) * width] = pixelSum;
+		d_outImagePtr[outPixelPos] = pixelSum;
 		pixelSum = 0;
 	}
 }
@@ -69,15 +71,17 @@ __global__ void filterImageConstant(float* d_sourceImagePtr, float* d_outImagePt
 	const int i = blockIdx.y * blockDim.y + threadIdx.y + s;
 	const int j = blockIdx.x * blockDim.x + threadIdx.x + s;
 
-	int filterRowIndex = 0;
-	int sourceImgRowIndex = 0;
+	unsigned int filterRowIndex = 0;
+	unsigned int sourceImgRowIndex = 0;
 	float pixelSum = 0;
-	int sourceImgIndex = 0;
-	int maskIndex = 0;
+	unsigned int sourceImgIndex = 0;
+	unsigned int maskIndex = 0;
 
 	// Check out of bounds thread idx
 	if( j >= s && j < paddedWidth - s &&
 			i >= s && i < paddedHeight - s) {
+
+		int outPixelPos = (j - s) + (i - s) * width;
 
 		// Apply convolution
 		for (int h = -s;  h <= s; h++) {
@@ -100,7 +104,7 @@ __global__ void filterImageConstant(float* d_sourceImagePtr, float* d_outImagePt
 		}
 
 		// Write pixel on the output image
-		d_outImagePtr[(j - s) + (i - s) * width] = pixelSum;
+		d_outImagePtr[outPixelPos] = pixelSum;
 		pixelSum = 0;
 	}
 }
@@ -113,50 +117,51 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 									int filterWidth, int filterHeight)
 {
 	// Each block will share the same data, enabling a faster memory access.
-	// Global memory access for each thread will be: number of tile sub blocks * threads
+	// Global memory access for each block will be: number of tile sub blocks * threads
 	// instead of 9 * threads
 
 	// Tile shared array (dynamically sized by kernel launcher)
 	extern __shared__ float s_data[];
 
 	// Evaluate tile's size
-	int tileWidth = blockWidth + 2 * surroundingPixels;
-	int tileHeight = blockHeight + 2 * surroundingPixels;
+	unsigned int tileWidth = blockWidth + 2 * surroundingPixels;
+	unsigned int tileHeight = blockHeight + 2 * surroundingPixels;
 
 	// Evaluates number of sub blocks
-	int noSubBlocks = static_cast<int>(ceil(static_cast<float>(tileHeight) /
+	unsigned int noSubBlocks = static_cast<int>(ceil(static_cast<float>(tileHeight) /
 																					static_cast<float>(blockDim.y)));
 
 	// Get start and end coordinates for blocks
-	int blockStartCol = blockIdx.x * blockWidth + surroundingPixels;
-	int blockEndCol = blockStartCol + blockWidth;
-	int blockStartRow = blockIdx.y * blockHeight + surroundingPixels;
-	int blockEndRow = blockStartRow + blockHeight;
+	unsigned int blockStartCol = blockIdx.x * blockWidth + surroundingPixels;
+	unsigned int blockEndCol = blockStartCol + blockWidth;
+	unsigned int blockStartRow = blockIdx.y * blockHeight + surroundingPixels;
+	unsigned int blockEndRow = blockStartRow + blockHeight;
 
 	// Get start and end coordinates for tiles
-	int tileStartCol = blockStartCol - surroundingPixels;
-	int tileEndCol = blockEndCol + surroundingPixels;
-	int tileEndClampedCol = min(tileEndCol, paddedWidth);
+	unsigned int tileStartCol = blockStartCol - surroundingPixels;
+	unsigned int tileEndCol = blockEndCol + surroundingPixels;
+	unsigned int tileEndClampedCol = min(tileEndCol, paddedWidth);
 
-	int tileStartRow = blockStartRow - surroundingPixels;
-	int tileEndRow = blockEndRow + surroundingPixels;
-	int tileEndClampedRow = min(tileEndRow, paddedHeight);
+	unsigned int tileStartRow = blockStartRow - surroundingPixels;
+	unsigned int tileEndRow = blockEndRow + surroundingPixels;
+	unsigned int tileEndClampedRow = min(tileEndRow, paddedHeight);
 
 	// Pixel position in tile
-	int tilePixelPosCol = threadIdx.x;
+	unsigned int tilePixelPosCol = threadIdx.x;
 	// Input image pixel column position
-	int iPixelPosCol = tileStartCol + tilePixelPosCol;
+	unsigned int iPixelPosCol = tileStartCol + tilePixelPosCol;
 
-	int tilePixelPosRow = 0;
-	int iPixelPosRow = 0;
-	int iPixelPos = 0;
-	int tilePixelPos = 0;
-	for(int subBlockNo = 0; subBlockNo < noSubBlocks; subBlockNo++) {
+	unsigned int tilePixelPosRow = 0;
+	unsigned int iPixelPosRow = 0;
+	unsigned int iPixelPos = 0;
+	unsigned int tilePixelPos = 0;
+
+	for (int subBlockNo = 0; subBlockNo < noSubBlocks; subBlockNo++) {
 		tilePixelPosRow = threadIdx.y + subBlockNo * blockDim.y;
 		iPixelPosRow = tileStartRow + tilePixelPosRow;
 
 		// Check if the pixel is in the image
-		if(iPixelPosCol < tileEndClampedCol && iPixelPosRow < tileEndClampedRow) {
+		if (iPixelPosCol < tileEndClampedCol && iPixelPosRow < tileEndClampedRow) {
 			iPixelPos = iPixelPosRow * paddedWidth + iPixelPosCol;
 	      tilePixelPos = tilePixelPosRow * tileWidth + tilePixelPosCol;
 	      // Load the pixel in the shared memory
@@ -164,30 +169,31 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 	    }
 	}
 
-	int oPixelPosCol = 0;
-	int oPixelPosRow = 0;
-	int oPixelPos = 0;
-	float pixelSum = 0;
-	int tilePixelPosOffset = 0;
-	int maskIndex = 0;
-
 	// Wait for threads loading data in tiles
 	__syncthreads();
 
-	for(int subBlockNo = 0; subBlockNo < noSubBlocks; subBlockNo++) {
+	if (iPixelPosCol >= tileStartCol + surroundingPixels &&
+	    		iPixelPosCol < tileEndClampedCol - surroundingPixels) {
 
+	unsigned int oPixelPosRow = 0;
+	unsigned int oPixelPos = 0;;
+	unsigned int tilePixelPosOffset = 0;
+	unsigned int maskIndex = 0;
+	unsigned int oPixelPosCol = iPixelPosCol - surroundingPixels;
+
+	for (int subBlockNo = 0; subBlockNo < noSubBlocks; subBlockNo++) {
+
+		 float pixelSum = 0;
 	    tilePixelPosRow = threadIdx.y + subBlockNo * blockDim.y;
 	    iPixelPosRow = tileStartRow + tilePixelPosRow;
 
 	    // Check if the pixel is in the tile and image.
 	    // Pixels in the tile padding are exclude from evaluation.
-	     if( iPixelPosCol >= tileStartCol + surroundingPixels &&
-	    		iPixelPosCol < tileEndClampedCol - surroundingPixels &&
-	    		iPixelPosRow >= tileStartRow + surroundingPixels &&
-	    		iPixelPosRow < tileEndClampedRow - surroundingPixels ) {
+	     if (iPixelPosRow >= tileStartRow + surroundingPixels &&
+	    		iPixelPosRow < tileEndClampedRow - surroundingPixels) {
 
 	    	 // Evaluate pixel position for output image
-	    	 oPixelPosCol = iPixelPosCol - surroundingPixels;
+	    	 //oPixelPosCol = iPixelPosCol - surroundingPixels;
 	    	 oPixelPosRow = iPixelPosRow - surroundingPixels;
 	    	 oPixelPos = oPixelPosRow * width + oPixelPosCol;
 
@@ -214,6 +220,7 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 			d_outImagePtr[oPixelPos] = pixelSum;
 			pixelSum = 0;
 	    }
+	}
 	}
 }
 
@@ -412,7 +419,7 @@ bool runShared(const float* sourceImage,
 	float *d_sourceImagePtr;
 	float *d_outImagePtr;
 
-	const int blockWidth = 32;
+	const int blockWidth = 64;
 	const int blockHeight = 32;
 	const int surroundingPixels = floor(filterWidth / 2);
 
@@ -423,7 +430,7 @@ bool runShared(const float* sourceImage,
 	// Thread block height will be less than its width.
 	// This way we can use bigger kernel size without
 	// exceeding thread limit
-	const int threadBlockHeight = 8;
+	const int threadBlockHeight = 4;
 
 	// Evaluate images and kernel size
 	const int sourceImgSize = sizeof(float) * paddedWidth * paddedHeight;

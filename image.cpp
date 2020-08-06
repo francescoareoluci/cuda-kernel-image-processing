@@ -156,7 +156,7 @@ std::vector<float> Image::applyFilterCommon(const Kernel& kernel) const
 
     int paddedWidth = width + floor(filterWidth / 2) * 2;
     int s = floor(filterWidth/2);
-    int pixelSum = 0;
+    float pixelSum = 0;
 
     int filterRowIndex = 0;
     int sourceImgRowIndex = 0;
