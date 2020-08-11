@@ -22,7 +22,6 @@ int Image::getImageHeight() const
 
 int Image::getImageChannels() const
 {
-    //return m_image.size();
     return 1;
 }
 
@@ -53,14 +52,12 @@ bool Image::loadImage(const char *filename)
     for (unsigned int h = 0; h < image.get_height(); h++) {
         for (unsigned int w = 0; w < image.get_width(); w++) {
             imageMatrix[w + h * m_imageWidth] = image[h][w];
-            //imageMatrix[1][h][w] = image[h][w].green;
-            //imageMatrix[2][h][w] = image[h][w].blue;
         }
     }
 
     m_image = imageMatrix;
 
-     return true;
+    return true;
 }
 
 bool Image::saveImage(const char *filename) const
@@ -73,15 +70,13 @@ bool Image::saveImage(const char *filename) const
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             imageFile[y][x] = m_image[x + y * width];
-            //imageFile[y][x].green = m_image[1][y][x];
-            //imageFile[y][x].blue = m_image[2][y][x];
         }
     }
     imageFile.write(filename);
 
     std::cout << "Image saved in " << std::string(filename) << std::endl;
 
-     return true;
+    return true;
 }
 
 bool Image::applyFilter(Image& resultingImage, const Kernel& kernel) const
@@ -95,7 +90,7 @@ bool Image::applyFilter(Image& resultingImage, const Kernel& kernel) const
 
     newImage.clear();
 
-     return true;
+    return true;
 }
 
 bool Image::applyFilter(const Kernel& kernel)
@@ -109,9 +104,9 @@ bool Image::applyFilter(const Kernel& kernel)
 
     this->setImage(newImage, m_imageWidth, m_imageHeight);
 
-   std::cout << "Done!" << std::endl;
+    std::cout << "Done!" << std::endl;
 
-   newImage.clear();
+    newImage.clear();
 
     return true;
 }
@@ -139,10 +134,10 @@ std::vector<float> Image::applyFilterCommon(const Kernel& kernel) const
     }
 
     // Input padding w.r.t. filter size
-     auto t1 = std::chrono::high_resolution_clock::now();
+    auto t1 = std::chrono::high_resolution_clock::now();
     std::vector<float> paddedImage = buildReplicatePaddedImage(floor(filterHeight/2), floor(filterWidth/2));
-     auto t2 = std::chrono::high_resolution_clock::now();
-     auto paddingDuration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto paddingDuration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
     std::cout << "Padding Execution time: " << paddingDuration << " μs" << std::endl;
 
     std::vector<float> newImage(height * width);
@@ -150,7 +145,7 @@ std::vector<float> Image::applyFilterCommon(const Kernel& kernel) const
     // Get kernel matrix
     std::vector<float> mask = kernel.getKernel();
 
-    // Use pointers to speed up pixels access
+    // Get pointers to matrixes
     const float* maskPtr = {mask.data()};
     const float* paddedImagePtr = {paddedImage.data()};
 
@@ -162,36 +157,36 @@ std::vector<float> Image::applyFilterCommon(const Kernel& kernel) const
     int sourceImgRowIndex = 0;
     int outImgRowIndex = 0;
 
-   t1 = std::chrono::high_resolution_clock::now();
-   // Apply convolution
+    t1 = std::chrono::high_resolution_clock::now();
+    // Apply convolution
     for (int i = s; i < height + s; i++) {
     	outImgRowIndex = (i - s) * width;
         for (int j = s; j < width + s; j++) {
         	for (int h = -s;  h <= s; h++) {
         		filterRowIndex = (h + s) * filterWidth;
-            sourceImgRowIndex = (h + i) * paddedWidth;
+                sourceImgRowIndex = (h + i) * paddedWidth;
                 for (int w = -s; w <= s; w++) {
                 	pixelSum += maskPtr[(w + s) + filterRowIndex] *
-                                   	   paddedImagePtr[w + j + sourceImgRowIndex];
-            }
+                                paddedImagePtr[w + j + sourceImgRowIndex];
+                }
         	}
             if (pixelSum < 0) {
             	pixelSum = 0;
-         }
+            }
             else if (pixelSum > 255) {
             	pixelSum = 255;
-         }
-         newImage[(j - s) + outImgRowIndex] = pixelSum;
-         pixelSum = 0;
-       }
-   }
-   t2 = std::chrono::high_resolution_clock::now();
-   // Evaluating execution times
+            }
+            newImage[(j - s) + outImgRowIndex] = pixelSum;
+            pixelSum = 0;
+        }
+    }
+    t2 = std::chrono::high_resolution_clock::now();
+    // Evaluating execution times
     auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-   std::cout << "Sequential filtering execution time: " << filterDuration << " μs" << std::endl;
+    std::cout << "Sequential filtering execution time: " << filterDuration << " μs" << std::endl;
 
-   paddedImage.clear();
-   mask.clear();
+    paddedImage.clear();
+    mask.clear();
 
     return newImage;
 }
@@ -214,19 +209,19 @@ bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel, co
     	return false;
     }
 
-   // Input padding w.r.t. filter size
+    // Input padding w.r.t. filter size
     auto t1 = std::chrono::high_resolution_clock::now();
-   std::vector<float> paddedImage = buildReplicatePaddedImage(floor(filterHeight/2), floor(filterWidth/2));
+    std::vector<float> paddedImage = buildReplicatePaddedImage(floor(filterHeight/2), floor(filterWidth/2));
     auto t2 = std::chrono::high_resolution_clock::now();
     auto paddingDuration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-   std::cout << "Padding Execution time: " << paddingDuration << " μs" << std::endl;
+    std::cout << "Padding Execution time: " << paddingDuration << " μs" << std::endl;
 
-   std::vector<float> newImage(height * width);
+    std::vector<float> newImage(height * width);
 
-   // Get kernel matrix
-   std::vector<float> mask = kernel.getKernel();
+    // Get kernel matrix
+    std::vector<float> mask = kernel.getKernel();
 
-   // Use pointers to speed up pixels access
+    // Get pointers to matrixes
     const float* maskPtr = {mask.data()};
     const float* paddedImagePtr = {paddedImage.data()};
     float* newImagePtr = {newImage.data()};
@@ -235,30 +230,30 @@ bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel, co
     switch (cudaType) {
     	case CudaMemType::GLOBAL:
     		 result = run(paddedImagePtr, newImagePtr, maskPtr,
-    		        width, height,
-    		        width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
-    		        filterWidth, filterHeight);
+    		                width, height,
+    		                width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
+    		                filterWidth, filterHeight);
     	break;
 
     	case CudaMemType::CONSTANT:
     		result = runConstant(paddedImagePtr, newImagePtr, maskPtr,
-    		    		        width, height,
-    		    		        width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
-    		    		        filterWidth, filterHeight);
+    		    		            width, height,
+    		    		            width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
+    		    		            filterWidth, filterHeight);
     	break;
 
     	case CudaMemType::SHARED:
     		result = runShared(paddedImagePtr, newImagePtr, maskPtr,
-    		    		    		        width, height,
-    		    		    		        width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
-    		    		    		        filterWidth, filterHeight);
+                                width, height,
+                                width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
+                                filterWidth, filterHeight);
     	break;
 
     	default:
     		result = runShared(paddedImagePtr, newImagePtr, maskPtr,
-    		    		    		    		        width, height,
-    		    		    		    		        width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
-    		    		    		    		        filterWidth, filterHeight);
+                                width, height,
+                                width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
+                                filterWidth, filterHeight);
     	break;
     }
 
@@ -279,7 +274,7 @@ bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel, co
     newImage.clear();
     mask.clear();
 
-     return true;
+    return true;
 }
 
 std::vector<float> Image::buildReplicatePaddedImage(const int paddingHeight,
@@ -294,49 +289,45 @@ std::vector<float> Image::buildReplicatePaddedImage(const int paddingHeight,
     int maxWImageBoundary = width - 1;
     int paddedImageRowIndex = 0;
 
-   std::vector<float> paddedImage(paddedHeight * paddedWidth);
-   std::vector<float> sourceImage = this->m_image;
+    std::vector<float> paddedImage(paddedHeight * paddedWidth);
+    std::vector<float> sourceImage = this->m_image;
 
     for (int h = 0; h < paddedHeight; h++) {
     	paddedImageRowIndex = h * paddedWidth;
     	for (int w = 0; w < paddedWidth; w++) {
             if ((h < paddingHeight) && (w < paddingWidth)) {
             	paddedImage[w + paddedImageRowIndex] = sourceImage[0];
-         }
+            }
             else if ((h > maxHImageBoundary) && (w > maxWImageBoundary)) {
                paddedImage[w + paddedImageRowIndex] = sourceImage[(width - 1) + (height - 1) * width];
-         }
+            }
             else if ((h < paddingHeight) && (w > maxWImageBoundary)) {
                paddedImage[w + paddedImageRowIndex] = sourceImage[(width - 1) + (0) * width];
-         }
+            }
             else if ((w < paddingWidth) && (h > maxHImageBoundary)) {
                paddedImage[w + paddedImageRowIndex] = sourceImage[(0) + (height - 1) * width];
-         }
+            }
             else if (h < paddingHeight) {
                paddedImage[w + paddedImageRowIndex] = sourceImage[(w) + (0) * width];
-         }
+            }
             else if (w < paddingWidth) {
                paddedImage[w + paddedImageRowIndex] = sourceImage[(0) + (h) * width];
-         }
+            }
             else if (h > maxHImageBoundary) {
                paddedImage[w + paddedImageRowIndex] = sourceImage[(w) + (height - 1) * width];
-         }
+            }
             else if (w > maxWImageBoundary) {
                paddedImage[w + paddedImageRowIndex] = sourceImage[(width - 1) + (h) * width];
-         }
+            }
             else {
                paddedImage[w + paddedImageRowIndex] = sourceImage[(w - paddingWidth) + (h - paddingHeight) * width];
-         }
-       }
+            }
+        }
     }
 
     sourceImage.clear();
 
-    //Image pImg;
-    //pImg.setImage(paddedImage, paddedWidth, paddedHeight);
-    //pImg.saveImage("padded.png");
-
-     return paddedImage;
+    return paddedImage;
 }
 
 std::vector<float> Image::buildZeroPaddingImage(const int paddingHeight,
@@ -370,9 +361,5 @@ std::vector<float> Image::buildZeroPaddingImage(const int paddingHeight,
 
     sourceImage.clear();
 
-    //Image pImg;
-    //pImg.setImage(paddedImage, paddedWidth, paddedHeight);
-    //pImg.saveImage("padded.png");
-
-     return paddedImage;
+    return paddedImage;
 }

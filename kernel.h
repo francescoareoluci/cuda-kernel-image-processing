@@ -1,10 +1,3 @@
-/*
- * kernel.h
- *
- *  Created on: Jul 4, 2020
- *      Author: francesco
- */
-
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
@@ -89,8 +82,8 @@ class Kernel
         bool buildKernelCommon(std::vector<float> &kernel, int max, int min, int height, int width);
 
         std::vector<float> m_filterMatrix;     ///< Linearized matrix containing the kernel
-        int m_filterWidth;                      ///< Kernel height
-        int m_filterHeight;                     ///< Kernel width
+        int m_filterWidth;                     ///< Kernel height
+        int m_filterHeight;                    ///< Kernel width
 };
 
 

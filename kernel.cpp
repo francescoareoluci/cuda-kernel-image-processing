@@ -6,9 +6,9 @@
 #define SHARPEN_FILTER_MAX      5
 #define SHARPEN_FILTER_MIN     -1
 #define LAPLACIAN_FILTER_MAX    4
-#define LAPLACIAN_FILTER_MIN    -1
+#define LAPLACIAN_FILTER_MIN   -1
 #define LINE_DETECTOR_MAX       8
-#define LINE_DETECTOR_MIN       -1
+#define LINE_DETECTOR_MIN      -1
 
 
 Kernel::Kernel()
@@ -88,7 +88,7 @@ bool Kernel::setGaussianFilter(const int height, const int width, const float st
 bool Kernel::setSharpenFilter()
 {
     std::vector<float> kernel(3 * 3);
-     this->buildKernelCommon(kernel, SHARPEN_FILTER_MAX, SHARPEN_FILTER_MIN, 3, 3);
+    this->buildKernelCommon(kernel, SHARPEN_FILTER_MAX, SHARPEN_FILTER_MIN, 3, 3);
 
     kernel[0] = 0.0;
     kernel[2] = 0.0;
@@ -99,25 +99,25 @@ bool Kernel::setSharpenFilter()
     m_filterWidth = 3;
     m_filterHeight = 3;
 
-     return true;
+    return true;
 }
 
 bool Kernel::setEdgeDetectionFilter()
 {
     std::vector<float> kernel(3 * 3);
-     this->buildKernelCommon(kernel, LINE_DETECTOR_MAX, LINE_DETECTOR_MIN, 3, 3);
+    this->buildKernelCommon(kernel, LINE_DETECTOR_MAX, LINE_DETECTOR_MIN, 3, 3);
 
     m_filterMatrix = kernel;
     m_filterWidth = 3;
     m_filterHeight = 3;
 
-     return true;
+    return true;
 }
 
 bool Kernel::setLaplacianFilter()
 {
     std::vector<float> kernel(3 * 3);
-     this->buildKernelCommon(kernel, LAPLACIAN_FILTER_MAX, LAPLACIAN_FILTER_MIN, 3, 3);
+    this->buildKernelCommon(kernel, LAPLACIAN_FILTER_MAX, LAPLACIAN_FILTER_MIN, 3, 3);
 
     kernel[0] = 0.0;
     kernel[2] = 0.0;

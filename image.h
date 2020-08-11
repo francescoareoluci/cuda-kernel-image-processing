@@ -1,10 +1,3 @@
-/*
- * image.h
- *
- *  Created on: Jul 4, 2020
- *      Author: francesco
- */
-
 #ifndef IMAGE_H_
 #define IMAGE_H_
 
@@ -98,6 +91,15 @@ class Image
          */
         bool applyFilter(const Kernel& kernel);
 
+        /*
+         * @brief: apply a CUDA multithread convolution to the image 
+         *          and pass result in resultingImage object
+         *
+         * @params[out]: resultingImage: the image object where the matrix will be saved
+         * @params[in]: kernel: kernel to be applied to the image
+         * @params[in]: cudaType: specify the type of CUDA kernel to be used
+         * @return: true if successful, false otherwise
+         */
         bool multithreadFiltering(Image& resultingImage, const Kernel& kernel, const CudaMemType cudaType);
 
     private:
@@ -120,9 +122,9 @@ class Image
         std::vector<float> buildZeroPaddingImage(const int paddingHeight,
                                                 const int paddingWidth) const;
 
-        std::vector<float> m_image;			///< Linearized matrix containing the image pixels' values
-           int m_imageWidth;                       ///< Matrix width
-           int m_imageHeight;                      ///< Matrix height
+        std::vector<float> m_image;	    ///< Linearized matrix containing the image pixels' values
+        int m_imageWidth;               ///< Matrix width
+        int m_imageHeight;              ///< Matrix height
 };
 
 #endif /* IMAGE_H_ */

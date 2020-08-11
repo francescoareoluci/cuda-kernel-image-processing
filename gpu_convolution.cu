@@ -93,7 +93,7 @@ __global__ void filterImageConstant(float* d_sourceImagePtr, float* d_outImagePt
 	    	for (int w = -s; w <= s; w++) {
 	    		sourceImgIndex = w + j + sourceImgRowIndex;
 	    		maskIndex = (w + s) + filterRowIndex;
-	    		// Here we use the kernel in constant memory
+	    		// Here we use the kernel stored in constant memory
 	    		pixelSum += d_sourceImagePtr[sourceImgIndex] * d_cFilterKernel[maskIndex];
 	    	}
 		}
@@ -120,8 +120,8 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 									int filterWidth, int filterHeight)
 {
 	// Each block will share the same data, enabling a faster memory access.
-	// Global memory access for each block will be: number of tile sub blocks * threads
-	// instead of 9 * threads
+	// Global memory access for each block will be: number of tile's sub blocks * threads
+	// instead of kernel size * threads
 
 	// Tile shared array (dynamically sized by kernel launcher)
 	extern __shared__ float s_data[];
@@ -132,7 +132,7 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 
 	// Evaluates number of sub blocks
 	unsigned int noSubBlocks = static_cast<int>(ceil(static_cast<float>(tileHeight) /
-																					static_cast<float>(blockDim.y)));
+												static_cast<float>(blockDim.y)));
 
 	// Get start and end coordinates for blocks
 	unsigned int blockStartCol = blockIdx.x * blockWidth + surroundingPixels;
@@ -175,9 +175,6 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 	// Wait for threads loading data in tiles
 	__syncthreads();
 
-	if (iPixelPosCol >= tileStartCol + surroundingPixels &&
-	    		iPixelPosCol < tileEndClampedCol - surroundingPixels) {
-
 	unsigned int oPixelPosRow = 0;
 	unsigned int oPixelPos = 0;;
 	unsigned int tilePixelPosOffset = 0;
@@ -186,28 +183,29 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 
 	for (int subBlockNo = 0; subBlockNo < noSubBlocks; subBlockNo++) {
 
-		 float pixelSum = 0;
+		float pixelSum = 0;
 	    tilePixelPosRow = threadIdx.y + subBlockNo * blockDim.y;
 	    iPixelPosRow = tileStartRow + tilePixelPosRow;
 
 	    // Check if the pixel is in the tile and image.
 	    // Pixels in the tile padding are exclude from evaluation.
-	     if (iPixelPosRow >= tileStartRow + surroundingPixels &&
+	    if (iPixelPosCol >= tileStartCol + surroundingPixels &&
+				iPixelPosCol < tileEndClampedCol - surroundingPixels &&
+				iPixelPosRow >= tileStartRow + surroundingPixels &&
 	    		iPixelPosRow < tileEndClampedRow - surroundingPixels) {
 
-	    	 // Evaluate pixel position for output image
-	    	 //oPixelPosCol = iPixelPosCol - surroundingPixels;
-	    	 oPixelPosRow = iPixelPosRow - surroundingPixels;
-	    	 oPixelPos = oPixelPosRow * width + oPixelPosCol;
+	    	// Evaluate pixel position for output image
+	    	oPixelPosRow = iPixelPosRow - surroundingPixels;
+	    	oPixelPos = oPixelPosRow * width + oPixelPosCol;
 
-	    	 tilePixelPos = tilePixelPosRow * tileWidth + tilePixelPosCol;
+	    	tilePixelPos = tilePixelPosRow * tileWidth + tilePixelPosCol;
 
-	    	 // Apply convolution
-	    	 for (int h = -surroundingPixels;  h <= surroundingPixels; h++) {
-	    		 for (int w = -surroundingPixels; w <= surroundingPixels; w++) {
-	    			 tilePixelPosOffset = h * tileWidth + w;
-	    			 maskIndex = (h + surroundingPixels) * filterWidth + (w + surroundingPixels);
-	    			 pixelSum += s_data[tilePixelPos + tilePixelPosOffset] * d_cFilterKernel[maskIndex];
+	    	// Apply convolution
+	    	for (int h = -surroundingPixels;  h <= surroundingPixels; h++) {
+	    		for (int w = -surroundingPixels; w <= surroundingPixels; w++) {
+	    			tilePixelPosOffset = h * tileWidth + w;
+	    			maskIndex = (h + surroundingPixels) * filterWidth + (w + surroundingPixels);
+	    			pixelSum += s_data[tilePixelPos + tilePixelPosOffset] * d_cFilterKernel[maskIndex];
 				}
 			}
 
@@ -223,7 +221,6 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 			d_outImagePtr[oPixelPos] = pixelSum;
 			pixelSum = 0;
 	    }
-	}
 	}
 }
 
@@ -256,11 +253,11 @@ bool run(const float* sourceImage,
 	cudaMalloc(reinterpret_cast<void**>(&d_outImagePtr), outImageSize);
 
 	auto t4 = std::chrono::high_resolution_clock::now();
-	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
+	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
 
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
-		printf("Error: %s\n", cudaGetErrorString(err));
+		std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
 		return false;
 	}
 
@@ -271,19 +268,17 @@ bool run(const float* sourceImage,
 	cudaMemcpy(d_maskPtr, mask, maskSize, cudaMemcpyHostToDevice);
 
 	t4 = std::chrono::high_resolution_clock::now();
-	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
+	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
 
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
-		printf("Error: %s\n", cudaGetErrorString(err));
+		std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
 		return false;
 	}
 
 	// Allocates block size and grid size
 	dim3 threadsPerBlock(blockWidth, blockHeight);
 	dim3 blocksPerGrid(divUp(width, blockWidth), divUp(height, blockHeight));
-
-	printf("Blocks: %d, Threads: %d\n", width / threadsPerBlock.x * height / threadsPerBlock.y, blockWidth * blockHeight);
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 
@@ -293,7 +288,7 @@ bool run(const float* sourceImage,
 
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
-	    printf("Error: %s\n", cudaGetErrorString(err));
+	    std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
 	    return false;
 	}
 
@@ -301,7 +296,7 @@ bool run(const float* sourceImage,
 	cudaDeviceSynchronize();
 
 	auto t2 = std::chrono::high_resolution_clock::now();
-	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 	std::cout << "CUDA global memory filtering execution time: " << filterDuration << " μs" << std::endl;
 
 	t3 = std::chrono::high_resolution_clock::now();
@@ -310,7 +305,7 @@ bool run(const float* sourceImage,
 	cudaMemcpy(outImage, d_outImagePtr, outImageSize, cudaMemcpyDeviceToHost);
 
 	t4 = std::chrono::high_resolution_clock::now();
-	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
+	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
 	std::cout << "Copy Execution time: " << copyDuration << " μs" << std::endl;
 
 	// Cleanup after kernel execution
@@ -348,11 +343,11 @@ bool runConstant(const float* sourceImage,
 	cudaMalloc(reinterpret_cast<void**>(&d_outImagePtr), outImageSize);
 
 	auto t4 = std::chrono::high_resolution_clock::now();
-	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
+	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
 
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
-		printf("Error: %s\n", cudaGetErrorString(err));
+		std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
 		return false;
 	}
 
@@ -363,19 +358,17 @@ bool runConstant(const float* sourceImage,
 	cudaMemcpyToSymbol(d_cFilterKernel, mask, maskSize, 0, cudaMemcpyHostToDevice);
 
 	t4 = std::chrono::high_resolution_clock::now();
-	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
+	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
 
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
-		printf("Error: %s\n", cudaGetErrorString(err));
+		std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
 		return false;
 	}
 
 	// Allocates block size and grid size
 	dim3 threadsPerBlock(blockWidth, blockHeight);
 	dim3 blocksPerGrid(divUp(width, blockWidth), divUp(height, blockHeight));
-
-	printf("Blocks: %d, Threads: %d\n", width / threadsPerBlock.x * height / threadsPerBlock.y, blockWidth * blockHeight);
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 
@@ -385,7 +378,7 @@ bool runConstant(const float* sourceImage,
 
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
-	    printf("Error: %s\n", cudaGetErrorString(err));
+	    std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
 	    return false;
 	}
 
@@ -393,14 +386,14 @@ bool runConstant(const float* sourceImage,
 	cudaDeviceSynchronize();
 
 	auto t2 = std::chrono::high_resolution_clock::now();
-	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 	std::cout << "CUDA constant filtering execution time: " << filterDuration << " μs" << std::endl;
 
 	// Transfer resulting image back
 	t3 = std::chrono::high_resolution_clock::now();
 	cudaMemcpy(outImage, d_outImagePtr, outImageSize, cudaMemcpyDeviceToHost);
 	t4 = std::chrono::high_resolution_clock::now();
-	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
+	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
 	std::cout << "Copy Execution time: " << copyDuration << " μs" << std::endl;
 
 	// Cleanup after kernel execution
@@ -445,9 +438,7 @@ bool runShared(const float* sourceImage,
 											divUp(height, blockHeight));
 
 	int noSubBlocks = static_cast<int>(ceil(static_cast<float>(tileHeight) /
-																					static_cast<float>(divUp(height, blockHeight))));
-
-	printf("Blocks: %d, Threads: %d\n", divUp(width, blockWidth) * divUp(height, blockHeight), tileWidth * threadBlockHeight);
+										static_cast<float>(divUp(height, blockHeight))));
 
 	// Evaluates the shared memory size
 	int sharedMemorySize = tileWidth * tileHeight * sizeof(float);
@@ -460,11 +451,11 @@ bool runShared(const float* sourceImage,
 	cudaMalloc(reinterpret_cast<void**>(&d_outImagePtr), outImageSize);
 
 	auto t4 = std::chrono::high_resolution_clock::now();
-	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
+	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
 
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
-		printf("Error: %s\n", cudaGetErrorString(err));
+		std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
 		return false;
 	}
 
@@ -479,7 +470,7 @@ bool runShared(const float* sourceImage,
 
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
-		printf("Error: %s\n", cudaGetErrorString(err));
+		std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
 		return false;
 	}
 
@@ -495,7 +486,7 @@ bool runShared(const float* sourceImage,
 
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
-		printf("Error: %s\n", cudaGetErrorString(err));
+		std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
 		return false;
 	}
 
@@ -503,7 +494,7 @@ bool runShared(const float* sourceImage,
 	cudaDeviceSynchronize();
 
 	auto t2 = std::chrono::high_resolution_clock::now();
-	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+	auto filterDuration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 	std::cout << "CUDA shared filtering execution time: " << filterDuration << " μs" << std::endl;
 
 	t3 = std::chrono::high_resolution_clock::now();
@@ -512,12 +503,12 @@ bool runShared(const float* sourceImage,
 	cudaMemcpy(outImage, d_outImagePtr, outImageSize, cudaMemcpyDeviceToHost);
 
 	t4 = std::chrono::high_resolution_clock::now();
-	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>( t4 - t3 ).count();
+	copyDuration += std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
 	std::cout << "Copy Execution time: " << copyDuration << " μs" << std::endl;
 
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
-		printf("Error: %s\n", cudaGetErrorString(err));
+		std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
 		return false;
 	}
 
