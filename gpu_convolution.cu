@@ -22,8 +22,8 @@ const unsigned int MAX_FILTER_SIZE = 25;
 __device__ __constant__ float d_cFilterKernel[MAX_FILTER_SIZE * MAX_FILTER_SIZE];
 
 __global__ void filterImageGlobal(float* d_sourceImagePtr, float* d_maskPtr, float* d_outImagePtr,
-						int width, int height, int paddedWidth, int paddedHeight,
-						int filterWidth, int filterHeight)
+									int width, int height, int paddedWidth, int paddedHeight,
+									int filterWidth, int filterHeight)
 {
 	const int s = floor(static_cast<float>(filterWidth) / 2);
 	const int i = blockIdx.y * blockDim.y + threadIdx.y + s;
@@ -67,8 +67,8 @@ __global__ void filterImageGlobal(float* d_sourceImagePtr, float* d_maskPtr, flo
 }
 
 __global__ void filterImageConstant(float* d_sourceImagePtr, float* d_outImagePtr,
-						int width, int height, int paddedWidth, int paddedHeight,
-						int filterWidth, int filterHeight)
+										int width, int height, int paddedWidth, int paddedHeight,
+										int filterWidth, int filterHeight)
 {
 	const int s = floor(float(filterWidth) / 2);
 	const int i = blockIdx.y * blockDim.y + threadIdx.y + s;
@@ -224,12 +224,12 @@ __global__ void filterImageShared(float* d_sourceImagePtr, float* d_outImagePtr,
 	}
 }
 
-bool run(const float* sourceImage,
-        float* outImage,
-        const float* mask,
-        int width, int height,
-        int paddedWidth, int paddedHeight,
-        int filterWidth, int filterHeight)
+bool runGlobal(const float* sourceImage,
+        		float* outImage,
+        		const float* mask,
+        		int width, int height,
+        		int paddedWidth, int paddedHeight,
+        		int filterWidth, int filterHeight)
 {
 	std::cout << "Starting CUDA global memory convolution" << std::endl;
 
@@ -317,11 +317,11 @@ bool run(const float* sourceImage,
 }
 
 bool runConstant(const float* sourceImage,
-        float* outImage,
-        const float* mask,
-        int width, int height,
-        int paddedWidth, int paddedHeight,
-        int filterWidth, int filterHeight)
+        			float* outImage,
+        			const float* mask,
+        			int width, int height,
+        			int paddedWidth, int paddedHeight,
+        			int filterWidth, int filterHeight)
 {
 	std::cout << "Starting CUDA constant memory convolution" << std::endl;
 
@@ -419,14 +419,14 @@ bool runShared(const float* sourceImage,
 	const int blockHeight = 32;
 	const int surroundingPixels = floor(filterWidth / 2);
 
-	// TIles includes block size + block padding
+	// Tiles includes block size + block padding
 	const int tileWidth = blockWidth + 2 * surroundingPixels;
 	const int tileHeight = blockHeight + 2 * surroundingPixels;
 
 	// Thread block height will be less than its width.
 	// This way we can use bigger kernel size without
 	// exceeding thread limit
-	const int threadBlockHeight = 4;
+	const int threadBlockHeight = 8;
 
 	// Evaluate images and kernel size
 	const int sourceImgSize = sizeof(float) * paddedWidth * paddedHeight;
@@ -434,8 +434,7 @@ bool runShared(const float* sourceImage,
 	const int outImageSize = sizeof(float) * width * height;
 
 	dim3 threadsPerBlock(tileWidth, threadBlockHeight);
-	dim3 blocksPerGrid(divUp(width, blockWidth),
-											divUp(height, blockHeight));
+	dim3 blocksPerGrid(divUp(width, blockWidth), divUp(height, blockHeight));
 
 	int noSubBlocks = static_cast<int>(ceil(static_cast<float>(tileHeight) /
 										static_cast<float>(divUp(height, blockHeight))));

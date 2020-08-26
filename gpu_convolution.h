@@ -6,12 +6,12 @@
  *         convolution. The launched kernel will use global memory for
  * 	   source image and kernel matrix
  */
-bool run(const float* sourceImage,
-        float* outImage,
-        const float* mask,
-        int width, int height,
-        int paddedWidth, int paddedHeight,
-        int filterWidth, int filterHeight);
+bool runGlobal(const float* sourceImage,
+                float* outImage,
+                const float* mask,
+                int width, int height,
+                int paddedWidth, int paddedHeight,
+                int filterWidth, int filterHeight);
 
 /*
  * @brief: This function will launch a CUDA kernel to calculate image
@@ -19,11 +19,11 @@ bool run(const float* sourceImage,
  * 	   source image and constant memory for kernel matrix
  */
 bool runConstant(const float* sourceImage,
-        float* outImage,
-        const float* mask,
-        int width, int height,
-        int paddedWidth, int paddedHeight,
-        int filterWidth, int filterHeight);
+                float* outImage,
+                const float* mask,
+                int width, int height,
+                int paddedWidth, int paddedHeight,
+                int filterWidth, int filterHeight);
 
 /*
  * @brief: This function will launch a CUDA kernel to calculate image
@@ -31,11 +31,11 @@ bool runConstant(const float* sourceImage,
  * 	   load tiles of the source image and constant memory for kernel matrix
  */
 bool runShared(const float* sourceImage,
-        float* outImage,
-        const float* mask,
-        int width, int height,
-        int paddedWidth, int paddedHeight,
-        int filterWidth, int filterHeight);
+                float* outImage,
+                const float* mask,
+                int width, int height,
+                int paddedWidth, int paddedHeight,
+                int filterWidth, int filterHeight);
 
 
 #endif /* GPU_CONVOLUTION_H_ */

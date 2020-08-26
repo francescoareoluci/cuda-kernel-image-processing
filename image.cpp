@@ -229,10 +229,10 @@ bool Image::multithreadFiltering(Image& resultingImage, const Kernel& kernel, co
     bool result = false;
     switch (cudaType) {
     	case CudaMemType::GLOBAL:
-    		 result = run(paddedImagePtr, newImagePtr, maskPtr,
-    		                width, height,
-    		                width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
-    		                filterWidth, filterHeight);
+    		 result = runGlobal(paddedImagePtr, newImagePtr, maskPtr,
+    		                    width, height,
+    		                    width + floor(filterWidth / 2) * 2, height + floor(filterHeight / 2) * 2,
+    		                    filterWidth, filterHeight);
     	break;
 
     	case CudaMemType::CONSTANT:
